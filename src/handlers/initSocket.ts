@@ -1,25 +1,36 @@
 import { v4 as uuidv4 } from 'uuid';
 import { cache, Io } from '../server';
-import { SocketProps } from '../types/socket';
+import { SocketProps } from '../types/Socket';
 
 const initSocket = (io: Io, socket: SocketProps) => {
-  if (typeof socket.handshake.auth.userName !== 'string') return;
-  if (typeof socket.handshake.query.profileImage !== 'string') return;
+  const { name, profileImage, sessionId } = socket.handshake.auth;
+  if (typeof name !== 'string') return;
+  if (typeof profileImage !== 'string') return;
 
-  if (!socket.handshake.auth.sessionId) {
+  if (!sessionId) {
     const newSession = uuidv4();
     socket.emit('init:session', { sessionId: newSession });
-    socket.data.chats = {};
-    socket.data.sessionId = newSession;
-    socket.handshake.auth.sessionId = newSession;
+    socket.data = {
+      name: name,
+      sessionId: newSession,
+      profileImage: profileImage,
+      chats: {},
+      messages: {},
+      peerId: '',
+      groups: [],
+    };
   } else {
-    socket.data.sessionId = socket.handshake.auth.sessionId;
-    socket.data.chats = cache.get(socket.handshake.auth.sessionId)?.chats || {};
+    socket.data = cache.get(socket.handshake.auth.sessionId) || {
+      name: name,
+      sessionId: sessionId,
+      profileImage: profileImage,
+      chats: {},
+      messages: {},
+      peerId: '',
+      groups: [],
+    };
   }
 
-  socket.data.id = socket.data.sessionId;
-  socket.data.userName = socket.handshake.auth.userName;
-  socket.data.profileImage = socket.handshake.query.profileImage;
   socket.join(socket.data.sessionId!);
 };
 

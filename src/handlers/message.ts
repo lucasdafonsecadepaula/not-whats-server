@@ -1,42 +1,46 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Io } from '../server';
-import { SocketProps } from '../types/socket';
+import { SocketProps } from '../types/Socket';
 
 const message = (io: Io, socket: SocketProps) => {
-  const { sessionId: mySessionId = '', userName: myUserName = '', chats = {} } = socket.data;
-  socket.on('message:send', ({ message: { to, text } }) => {
+  const { sessionId: mySessionId = '', name: myName = '', chats = {}, messages = {} } = socket.data;
+  socket.on('message:send', ({ message: { to, text }, chatId }) => {
     const now = new Date().toISOString();
-    socket.to(to.id).emit('message:receive', {
+    const messageid = uuidv4();
+
+    socket.to(chatId).emit('message:receive', {
       newMessage: {
-        id: uuidv4(),
+        id: messageid,
         to,
-        from: { id: mySessionId, name: myUserName },
+        from: { id: mySessionId, name: myName },
         text,
         createdAt: now,
       },
+      chatId: chatId,
     });
+
     socket.emit('message:receive', {
       newMessage: {
-        id: uuidv4(),
+        id: messageid,
         to,
-        from: { id: mySessionId, name: myUserName },
+        from: { id: mySessionId, name: myName },
         text,
         createdAt: now,
       },
+      chatId: chatId,
     });
   });
 
-  socket.on('message:receive-check', ({ message: { id, from, to, text, createdAt } }) => {
-    const friendId = mySessionId === from.id ? to.id : from.id;
-    if (chats[friendId]) {
-      chats[friendId] = [...chats[friendId], { id, from, to, text, createdAt }];
+  socket.on('message:receive-check', ({ message: { id, from, to, text, createdAt }, chatId }) => {
+    if (messages[chatId]) {
+      messages[chatId] = [...messages[chatId], { id, from, to, text, createdAt }];
     } else {
-      chats[friendId] = [{ id, from, to, text, createdAt }];
+      messages[chatId] = [{ id, from, to, text, createdAt }];
     }
   });
 
-  socket.on('message:history-by-user', ({ userId }) => {
-    socket.emit('message:history-by-user', { messages: chats[userId] || [] });
+  socket.on('message:history-by-chat', ({ chatId }) => {
+    socket.emit('message:history-by-chat', { messages: messages[chatId] || [] });
   });
 };
 

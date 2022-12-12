@@ -12,13 +12,14 @@ import {
   ServerToClientEvents,
   SocketData,
   SocketProps,
-} from './types/socket';
-import { User } from './types/User';
+} from './types/Socket';
+
+const PORT = process.env.PORT || 8000;
 
 const app = express();
 const server = http.createServer(app);
 
-export const cache = new Map<string, Partial<User>>(); // My DB :D
+export const cache = new Map<string, Partial<SocketData>>(); // My DB :D
 export const TIME_TO_CLEAR_CACHE = 1000 * 60 * 5; // 5 minutes
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
@@ -45,8 +46,8 @@ const onConnection = (socket: SocketProps) => {
 
 io.on('connection', onConnection);
 
-server.listen(8000, () => {
-  console.log('listening on *:8000');
+server.listen(PORT, () => {
+  console.log(`listening on *:${PORT}`);
 });
 
 export type Io = typeof io;
